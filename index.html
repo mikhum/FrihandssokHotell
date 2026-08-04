@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HotellSök - Frihandskarta</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; margin: 0; padding: 0; overflow: hidden;}
+        #map { width: 100%; height: 100%; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .gmnoprint { transition: opacity 0.3s ease; }
+        .hotel-card.active { border-color: #3b82f6; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.5); background-color: #eff6ff;}
+    </style>
+</head>
+<body class="h-screen flex flex-col">
+
+    <header class="bg-white shadow-md z-20 flex items-center justify-between px-6 py-4 border-b border-gray-200">
+        <div class="flex items-center gap-3">
+            <div class="bg-indigo-600 p-2 rounded-lg text-white">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
+            </div>
+            <h1 class="text-xl font-bold text-gray-800">Draw & Search</h1>
+        </div>
+
+        <div class="flex items-center gap-4 flex-1 max-w-4xl ml-8">
+            <div class="flex-1 flex gap-4 items-center bg-gray-50 p-2 rounded-lg border border-gray-200">
+                <div class="flex-1 relative">
+                    <input type="password" id="apiKey" placeholder="Google API-nyckel" class="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <button onclick="initApp()" class="absolute right-1 top-1 bottom-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 rounded font-medium transition-colors">Starta Karta</button>
+                </div>
+            </div>
+
+            <div class="flex gap-4 items-center pl-4 border-l border-gray-300">
+                <div class="flex flex-col">
+                    <label class="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Min. Betyg: <span id="ratingVal" class="text-indigo-600">4.0</span></label>
+                    <input type="range" id="minRating" min="1" max="5" step="0.5" value="4.0" class="w-24 accent-indigo-600" oninput="document.getElementById('ratingVal').innerText = this.value">
+                </div>
+                
+                <div class="flex flex-col">
+                    <label class="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Max Pris</label>
+                    <select id="maxPrice" class="text-sm border-none bg-transparent font-medium text-gray-700 focus:ring-0 cursor-pointer">
+                        <option value="4">Ingen gräns</option>
+                        <option value="3">Dyrt (3)</option>
+                        <option value="2" selected>Mellan (2)</option>
+                        <option value="1">Billigt (1)</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center gap-1.5 ml-2">
+                    <input type="checkbox" id="reqRestaurant" class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" checked>
+                    <label for="reqRestaurant" class="text-sm font-medium text-gray-700 cursor-pointer">Restaurang</label>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 flex overflow-hidden relative">
+        <div class="flex-1 relative bg-gray-200">
+            <div id="map"></div>
+            
+            <div id="mapOverlay" class="absolute inset-0 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center z-10">
+                <svg class="w-20 h-20 text-indigo-200 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
+                <h2 class="text-xl font-bold text-gray-800 mb-2">Väntar på API-nyckel</h2>
+                <p class="text-gray-500 max-w-md text-center text-sm">Klistra in nyckeln. Kräver att "Places API (New)" och "Maps JavaScript API" är aktiverade i Google Cloud med "None" i restriktioner.</p>
+            </div>
+
+            <div id="instructionToast" class="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-gray-900/80 text-white px-4 py-2 rounded-full shadow-lg text-sm font-medium items-center gap-2 hidden z-10 pointer-events-none">
+                <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                <span>Använd polygon-ikonen högst upp i kartan för att ringa in ett sökområde!</span>
+            </div>
+        </div>
+
+        <aside class="w-96 bg-white border-l border-gray-200 shadow-2xl flex flex-col z-20">
+            <div class="p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="font-bold text-gray-800 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-indigo-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 01-1.32.95l-3.7-1.48-3.7 1.48A1 1 0 014 16V4z" clip-rule="evenodd"></path></svg>
+                    Hittade Hotell
+                </h3>
+                <span id="resultCount" class="bg-indigo-100 text-indigo-800 text-xs font-bold px-2 py-1 rounded-full">0 st</span>
+            </div>
+            
+            <div id="statusMessage" class="hidden m-4 p-3 rounded text-sm font-medium text-center"></div>
+
+            <div class="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-4" id="hotelList">
+                <div class="h-full flex flex-col items-center justify-center text-gray-400 space-y-3">
+                    <svg class="w-12 h-12 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    <p class="text-sm italic text-center px-4">Rita ett område på kartan för att starta sökningen.</p>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <script>
+        let map;
+        let drawingManager;
+        let currentPolygon = null;
+        let hotelMarkers = [];
+        let infoWindow;
+        let activeHotelId = null;
+
+        function setStatus(msg, type = 'info') {
+            const statusDiv = document.getElementById('statusMessage');
+            if(!msg) {
+                statusDiv.classList.add('hidden');
+                return;
+            }
+            statusDiv.className = 'm-4 p-3 rounded text-sm font-medium text-center border break-words';
+            if (type === 'error') statusDiv.classList.add('bg-red-50', 'text-red-700', 'border-red-200');
+            else if (type === 'info') statusDiv.classList.add('bg-blue-50', 'text-blue-700', 'border-blue-200');
+            else if (type === 'warning') statusDiv.classList.add('bg-yellow-50', 'text-yellow-700', 'border-yellow-200');
+            
+            statusDiv.innerText = msg;
+            statusDiv.classList.remove('hidden');
+        }
+
+        // Fångar upp Auth-fel för en bättre användarupplevelse
+        window.gm_authFailure = function() {
+            const url = window.location.href;
+            document.getElementById('mapOverlay').style.display = 'flex';
+            document.getElementById('mapOverlay').innerHTML = `
+                <div class="text-red-500 mb-4"><svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg></div>
+                <h2 class="text-xl font-bold text-gray-800 mb-2">Säkerhetsspärr i Google Cloud</h2>
+                <p class="text-gray-600 max-w-md text-center text-sm mb-4">Google blockerar anropet eftersom API-nyckeln har en webbplats-restriktion, eller så saknas rätt API.</p>
+                <div class="bg-red-50 p-4 rounded-lg border border-red-200 w-full max-w-md text-sm text-left shadow-inner">
+                    <p class="font-bold mb-2 text-red-800">Gör så här i Google Cloud:</p>
+                    <ol class="list-decimal list-inside text-red-900 space-y-2 ml-2">
+                        <li>Sätt Application restrictions till <b>None</b>.</li>
+                        <li>Se till att du har aktiverat <b>Places API (New)</b>.</li>
+                        <li>Vänta i 5 minuter och ladda om.</li>
+                    </ol>
+                </div>
+            `;
+        };
+
+        function initApp() {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            if (!apiKey) return;
+
+            document.getElementById('mapOverlay').innerHTML = '<p class="text-indigo-600 font-bold animate-pulse">Laddar modern karta...</p>';
+
+            // Laddar modern v=weekly istället för deprecierade versioner
+            const script = document.createElement('script');
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&v=weekly&libraries=drawing,places,geometry&callback=initializeMap`;
+            script.async = true;
+            script.defer = true;
+            script.onerror = () => {
+                document.getElementById('mapOverlay').innerHTML = '<p class="text-red-500 font-bold">Kunde inte ladda Google Maps.</p>';
+            };
+            document.head.appendChild(script);
+        }
+
+        window.initializeMap = function() {
+            document.getElementById('mapOverlay').style.display = 'none';
+            document.getElementById('instructionToast').style.display = 'flex';
+
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: { lat: 59.3293, lng: 18.0686 }, // Startar i Stockholm
+                zoom: 12,
+                mapTypeControl: false,
+                streetViewControl: false,
+                styles: [
+                    { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] }
+                ]
+            });
+
+            infoWindow = new google.maps.InfoWindow();
+
+            // Sätt upp ritverktyget
+            drawingManager = new google.maps.drawing.DrawingManager({
+                drawingMode: null,
+                drawingControl: true,
+                drawingControlOptions: {
+                    position: google.maps.ControlPosition.TOP_CENTER,
+                    drawingModes: [google.maps.drawing.OverlayType.POLYGON]
+                },
+                polygonOptions: {
+                    fillColor: '#4f46e5',
+                    fillOpacity: 0.2,
+                    strokeWeight: 2,
+                    strokeColor: '#4f46e5',
+                    clickable: false,
+                    editable: false,
+                    zIndex: 1
+                }
+            });
+
+            drawingManager.setMap(map);
+
+            google.maps.event.addListener(drawingManager, 'overlaycomplete', function(event) {
+                if (event.type === google.maps.drawing.OverlayType.POLYGON) {
+                    if (currentPolygon) currentPolygon.setMap(null);
+                    
+                    currentPolygon = event.overlay;
+                    drawingManager.setDrawingMode(null); // Stäng av pennan
+                    document.getElementById('instructionToast').style.display = 'none';
+
+                    performSearchInPolygon(currentPolygon);
+                }
+            });
+        };
+
+        async function performSearchInPolygon(polygon) {
+            clearResults();
+            setStatus('Beräknar sökarea...', 'info');
+
+            // 1. Skapa en Bounding Box för API-sökningen
+            const polygonPath = polygon.getPath();
+            const bounds = new google.maps.LatLngBounds();
+            for (let i = 0; i < polygonPath.getLength(); i++) {
+                bounds.extend(polygonPath.getAt(i));
+            }
+            
+            setStatus('Söker via Places API (New)...', 'info');
+
+            const minRating = parseFloat(document.getElementById('minRating').value);
+            const maxPrice = parseInt(document.getElementById('maxPrice').value);
+            const reqRestaurant = document.getElementById('reqRestaurant').checked;
+            
+            const queryStr = reqRestaurant ? `hotel with restaurant` : `hotel`;
+
+            try {
+                // Använder det nya Places API:et (Kräver Places API (New) i GCP)
+                const request = {
+                    textQuery: queryStr,
+                    locationRestriction: bounds,
+                    // Vi måste definiera EXAKT vilka fält vi vill hämta för att spara bandbredd/kostnad
+                    fields: ['id', 'displayName', 'location', 'rating', 'priceLevel', 'formattedAddress', 'photos']
+                };
+
+                const { places } = await google.maps.places.Place.searchByText(request);
+
+                if (places && places.length > 0) {
+                    filterAndDisplayResults(places, polygon, minRating, maxPrice);
+                } else {
+                    setStatus('Hittade inga hotell i det inringade området.', 'warning');
+                }
+
+            } catch (error) {
+                console.error(error);
+                // Skriver ut exakta felmeddelandet om API-nyckeln fortfarande bråkar
+                setStatus(`Ett fel uppstod: ${error.message}`, 'error');
+            }
+        }
+
+        function filterAndDisplayResults(allResults, polygon, minRating, maxPrice) {
+            
+            // 2. Geometri-filtrering: Behåll bara de som ligger INNUTI ritade formen
+            let filtered = allResults.filter(place => {
+                if(!place.location) return false;
+                return google.maps.geometry.poly.containsLocation(place.location, polygon);
+            });
+
+            // 3. Filtrera på användarens UI-val
+            filtered = filtered.filter(hotel => {
+                const rating = hotel.rating || 0;
+                if (rating < minRating) return false;
+                
+                // Omvandla nya API:ets text-priser till siffror
+                let pLevel = 2; // Default till mellan
+                if (hotel.priceLevel === 'PRICE_LEVEL_INEXPENSIVE') pLevel = 1;
+                if (hotel.priceLevel === 'PRICE_LEVEL_MODERATE') pLevel = 2;
+                if (hotel.priceLevel === 'PRICE_LEVEL_EXPENSIVE') pLevel = 3;
+                if (hotel.priceLevel === 'PRICE_LEVEL_VERY_EXPENSIVE') pLevel = 4;
+
+                if (maxPrice < 4 && pLevel > maxPrice) return false;
+                
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                setStatus('Hittade hotell, men inga klarade kraven (Pris/Betyg) inuti formen.', 'warning');
+                return;
+            }
+
+            setStatus(null); // Allt gick bra
+            document.getElementById('resultCount').innerText = `${filtered.length} st`;
+            
+            const listContainer = document.getElementById('hotelList');
+            listContainer.innerHTML = '';
+
+            filtered.forEach((hotel, index) => {
+                const hotelId = hotel.id;
+                
+                // Nålen på kartan
+                const marker = new google.maps.Marker({
+                    map: map,
+                    position: hotel.location,
+                    title: hotel.displayName,
+                    icon: {
+                        path: google.maps.SymbolPath.CIRCLE,
+                        scale: 12,
+                        fillColor: "#ef4444",
+                        fillOpacity: 1,
+                        strokeColor: "white",
+                        strokeWeight: 2,
+                    },
+                    label: { text: (index + 1).toString(), color: "white", fontSize: "10px", fontWeight: "bold" }
+                });
+
+                hotelMarkers.push({ id: hotelId, marker: marker, data: hotel });
+
+                // Bildhantering i nya API:et
+                let photoUrl = 'https://placehold.co/300x200/f8fafc/94a3b8?text=Ingen+Bild';
+                if (hotel.photos && hotel.photos.length > 0) {
+                    photoUrl = hotel.photos[0].getURI({ maxWidth: 300, maxHeight: 200 });
+                }
+
+                // Snyggare utskrift av nya API:ets Price Levels
+                let priceString = 'Pris okänt';
+                if (hotel.priceLevel === 'PRICE_LEVEL_INEXPENSIVE') priceString = '💰 Billigt';
+                if (hotel.priceLevel === 'PRICE_LEVEL_MODERATE') priceString = '💰💰 Mellan';
+                if (hotel.priceLevel === 'PRICE_LEVEL_EXPENSIVE') priceString = '💰💰💰 Dyrt';
+                if (hotel.priceLevel === 'PRICE_LEVEL_VERY_EXPENSIVE') priceString = '💰💰💰💰 Lyx';
+
+                // Skapa UI Kortet
+                const card = document.createElement('div');
+                card.id = `card-${hotelId}`;
+                card.className = 'hotel-card bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col relative group';
+                
+                card.innerHTML = `
+                    <div class="absolute top-2 left-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold z-10 shadow-md border-2 border-white">${index + 1}</div>
+                    <div class="h-32 bg-gray-200 overflow-hidden relative">
+                        <img src="${photoUrl}" alt="${hotel.displayName}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                        <div class="absolute top-2 right-2 bg-white/95 px-2 py-1 rounded-md text-xs font-bold text-gray-800 flex items-center gap-1 shadow-sm">
+                            <span class="text-amber-400 text-sm">★</span> ${hotel.rating || 'N/A'}
+                        </div>
+                    </div>
+                    <div class="p-3">
+                        <h4 class="font-bold text-gray-800 text-sm leading-tight mb-1">${hotel.displayName}</h4>
+                        <p class="text-xs text-gray-500 truncate" title="${hotel.formattedAddress}">${hotel.formattedAddress}</p>
+                        <div class="mt-3 flex justify-between items-center">
+                            <span class="text-[11px] font-medium text-gray-600 bg-gray-100 px-2 py-1 rounded border border-gray-200">${priceString}</span>
+                            ${document.getElementById('reqRestaurant').checked ? '<span class="text-[10px] uppercase tracking-wide font-bold text-emerald-600 flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg> Mat</span>' : ''}
+                        </div>
+                    </div>
+                `;
+
+                listContainer.appendChild(card);
+
+                // Interaktion från listan till kartan
+                card.onclick = () => {
+                    highlightHotel(hotelId);
+                    map.panTo(hotel.location);
+                    if(map.getZoom() < 14) map.setZoom(14);
+                };
+
+                // Interaktion från kartan till listan
+                marker.addListener('click', () => {
+                    highlightHotel(hotelId);
+                    const listElement = document.getElementById('hotelList');
+                    const cardElement = document.getElementById(`card-${hotelId}`);
+                    if(cardElement) {
+                        listElement.scrollTo({
+                            top: cardElement.offsetTop - listElement.offsetTop - 16,
+                            behavior: 'smooth'
+                        });
+                    }
+                });
+            });
+        }
+
+        function highlightHotel(id) {
+            hotelMarkers.forEach(hm => {
+                hm.marker.setIcon({ ...hm.marker.getIcon(), fillColor: "#ef4444", scale: 12 });
+                hm.marker.setZIndex(1);
+                const el = document.getElementById(`card-${hm.id}`);
+                if(el) el.classList.remove('active');
+            });
+
+            activeHotelId = id;
+            const activeData = hotelMarkers.find(hm => hm.id === id);
+            
+            if (activeData) {
+                activeData.marker.setIcon({ ...activeData.marker.getIcon(), fillColor: "#3b82f6", scale: 16 });
+                activeData.marker.setZIndex(999);
+                
+                infoWindow.setContent(`<div class="p-1 font-sans text-sm font-bold">${activeData.data.displayName}</div>`);
+                infoWindow.open(map, activeData.marker);
+
+                const activeCard = document.getElementById(`card-${id}`);
+                if(activeCard) activeCard.classList.add('active');
+            }
+        }
+
+        function clearResults() {
+            hotelMarkers.forEach(hm => hm.marker.setMap(null));
+            hotelMarkers = [];
+            infoWindow.close();
+            activeHotelId = null;
+            document.getElementById('resultCount').innerText = `0 st`;
+            document.getElementById('hotelList').innerHTML = '';
+        }
+    </script>
+</body>
+</html>
