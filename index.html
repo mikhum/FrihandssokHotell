@@ -67,9 +67,25 @@
                 <p class="text-gray-500 max-w-md text-center text-sm">Klistra in nyckeln. Kräver att "Places API (New)" och "Maps JavaScript API" är aktiverade i Google Cloud med "None" i restriktioner.</p>
             </div>
 
+            <!-- Floating draw button -->
+            <div id="drawBtn" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 hidden">
+                <button onclick="activateDrawMode()" class="bg-white hover:bg-indigo-50 border-2 border-indigo-500 text-indigo-700 font-semibold text-sm px-5 py-2 rounded-full shadow-lg flex items-center gap-2 transition-all active:scale-95">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                    Rita sökområde
+                </button>
+            </div>
+
+            <!-- Active drawing mode indicator -->
+            <div id="drawingToast" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 hidden">
+                <div class="bg-indigo-600 text-white font-semibold text-sm px-5 py-2 rounded-full shadow-lg flex items-center gap-2 animate-pulse">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                    Håll och dra för att rita ett område...
+                </div>
+            </div>
+
             <div id="instructionToast" class="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-gray-900/80 text-white px-4 py-2 rounded-full shadow-lg text-sm font-medium items-center gap-2 hidden z-10 pointer-events-none">
                 <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                <span>Använd polygon-ikonen högst upp i kartan för att ringa in ett sökområde!</span>
+                <span>Klicka på "Rita sökområde" och dra för att ringa in ett hotellområde!</span>
             </div>
         </div>
 
@@ -95,11 +111,17 @@
 
     <script>
         let map;
-        let drawingManager;
         let currentPolygon = null;
         let hotelMarkers = [];
         let infoWindow;
         let activeHotelId = null;
+
+        // Freehand drawing state
+        let isDrawMode = false;
+        let isMouseDown = false;
+        let freehandPath = [];
+        let freehandLine = null;
+        let mdListener, mmListener, muListener;
 
         function setStatus(msg, type = 'info') {
             const statusDiv = document.getElementById('statusMessage');
@@ -118,18 +140,30 @@
 
         // Fångar upp Auth-fel för en bättre användarupplevelse
         window.gm_authFailure = function() {
-            const url = window.location.href;
+            const isFileProtocol = window.location.protocol === 'file:';
             document.getElementById('mapOverlay').style.display = 'flex';
             document.getElementById('mapOverlay').innerHTML = `
                 <div class="text-red-500 mb-4"><svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg></div>
-                <h2 class="text-xl font-bold text-gray-800 mb-2">Säkerhetsspärr i Google Cloud</h2>
-                <p class="text-gray-600 max-w-md text-center text-sm mb-4">Google blockerar anropet eftersom API-nyckeln har en webbplats-restriktion, eller så saknas rätt API.</p>
+                <h2 class="text-xl font-bold text-gray-800 mb-2">Autentiseringsfel – Google Maps</h2>
+                ${isFileProtocol ? `
+                <div class="bg-amber-50 p-4 rounded-lg border border-amber-300 w-full max-w-md text-sm text-left shadow-inner mb-3">
+                    <p class="font-bold mb-2 text-amber-800">⚠️ Du öppnar filen direkt (file://)</p>
+                    <p class="text-amber-900 mb-3">Google Maps blockerar anrop från <code class="bg-amber-100 px-1 rounded">file://</code>-protokollet. Du måste köra appen via en lokal webbserver (localhost).</p>
+                    <p class="font-bold mb-1 text-amber-800">Starta en lokal server:</p>
+                    <ol class="list-decimal list-inside text-amber-900 space-y-1 ml-2">
+                        <li>Öppna en terminal i mappen där filen ligger</li>
+                        <li>Kör: <code class="bg-amber-100 px-1 rounded font-mono">python -m http.server 8080</code></li>
+                        <li>Öppna <a href="http://localhost:8080" target="_blank" class="underline text-indigo-700 font-semibold">http://localhost:8080</a> i webbläsaren</li>
+                    </ol>
+                </div>
+                ` : ''}
                 <div class="bg-red-50 p-4 rounded-lg border border-red-200 w-full max-w-md text-sm text-left shadow-inner">
-                    <p class="font-bold mb-2 text-red-800">Gör så här i Google Cloud:</p>
+                    <p class="font-bold mb-2 text-red-800">Kontrollera även i Google Cloud Console:</p>
                     <ol class="list-decimal list-inside text-red-900 space-y-2 ml-2">
-                        <li>Sätt Application restrictions till <b>None</b>.</li>
-                        <li>Se till att du har aktiverat <b>Places API (New)</b>.</li>
-                        <li>Vänta i 5 minuter och ladda om.</li>
+                        <li>Sätt <b>Application restrictions</b> till <b>None</b> (eller lägg till <code class="bg-red-100 px-1 rounded">localhost</code>).</li>
+                        <li>Aktivera <b>Maps JavaScript API</b>.</li>
+                        <li>Aktivera <b>Places API (New)</b>.</li>
+                        <li>Vänta ~5 minuter och ladda om sidan.</li>
                     </ol>
                 </div>
             `;
@@ -141,9 +175,9 @@
 
             document.getElementById('mapOverlay').innerHTML = '<p class="text-indigo-600 font-bold animate-pulse">Laddar modern karta...</p>';
 
-            // Laddar modern v=weekly istället för deprecierade versioner
+            // v=3.64 är den senaste versionen som stödjer DrawingManager (borttaget i 3.65+)
             const script = document.createElement('script');
-            script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&v=weekly&libraries=drawing,places,geometry&callback=initializeMap`;
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&v=3.64&libraries=drawing,places,geometry&callback=initializeMap&loading=async`;
             script.async = true;
             script.defer = true;
             script.onerror = () => {
@@ -155,6 +189,7 @@
         window.initializeMap = function() {
             document.getElementById('mapOverlay').style.display = 'none';
             document.getElementById('instructionToast').style.display = 'flex';
+            document.getElementById('drawBtn').style.display = 'block';
 
             map = new google.maps.Map(document.getElementById('map'), {
                 center: { lat: 59.3293, lng: 18.0686 }, // Startar i Stockholm
@@ -167,38 +202,77 @@
             });
 
             infoWindow = new google.maps.InfoWindow();
+        };
 
-            // Sätt upp ritverktyget
-            drawingManager = new google.maps.drawing.DrawingManager({
-                drawingMode: null,
-                drawingControl: true,
-                drawingControlOptions: {
-                    position: google.maps.ControlPosition.TOP_CENTER,
-                    drawingModes: [google.maps.drawing.OverlayType.POLYGON]
-                },
-                polygonOptions: {
-                    fillColor: '#4f46e5',
-                    fillOpacity: 0.2,
-                    strokeWeight: 2,
-                    strokeColor: '#4f46e5',
-                    clickable: false,
-                    editable: false,
-                    zIndex: 1
-                }
-            });
+        function activateDrawMode() {
+            if (isDrawMode) return;
+            isDrawMode = true;
 
-            drawingManager.setMap(map);
+            document.getElementById('drawBtn').style.display = 'none';
+            document.getElementById('drawingToast').style.display = 'block';
+            document.getElementById('instructionToast').style.display = 'none';
 
-            google.maps.event.addListener(drawingManager, 'overlaycomplete', function(event) {
-                if (event.type === google.maps.drawing.OverlayType.POLYGON) {
-                    if (currentPolygon) currentPolygon.setMap(null);
-                    
-                    currentPolygon = event.overlay;
-                    drawingManager.setDrawingMode(null); // Stäng av pennan
-                    document.getElementById('instructionToast').style.display = 'none';
+            // Disable map panning so freehand draw works
+            map.setOptions({ draggable: false, gestureHandling: 'none', draggableCursor: 'crosshair' });
+
+            freehandPath = [];
+            if (freehandLine) { freehandLine.setMap(null); freehandLine = null; }
+            if (currentPolygon) { currentPolygon.setMap(null); currentPolygon = null; }
+
+            mdListener = map.addListener('mousedown', function(e) {
+                isMouseDown = true;
+                freehandPath = [e.latLng];
+
+                mmListener = map.addListener('mousemove', function(e) {
+                    if (!isMouseDown) return;
+                    freehandPath.push(e.latLng);
+                    if (freehandLine) {
+                        freehandLine.setPath(freehandPath);
+                    } else {
+                        freehandLine = new google.maps.Polyline({
+                            path: freehandPath,
+                            strokeColor: '#4f46e5',
+                            strokeWeight: 2.5,
+                            strokeOpacity: 0.8,
+                            map: map
+                        });
+                    }
+                });
+
+                // Use DOM mouseup on document — more reliable than Maps API event when draggable:false
+                function onMouseUp() {
+                    document.removeEventListener('mouseup', onMouseUp);
+                    isMouseDown = false;
+                    isDrawMode = false;
+
+                    // Clean up map listeners
+                    google.maps.event.removeListener(mdListener);
+                    google.maps.event.removeListener(mmListener);
+
+                    // Restore map interaction
+                    map.setOptions({ draggable: true, gestureHandling: 'auto', draggableCursor: '' });
+
+                    // Remove live polyline
+                    if (freehandLine) { freehandLine.setMap(null); freehandLine = null; }
+
+                    document.getElementById('drawingToast').style.display = 'none';
+                    document.getElementById('drawBtn').style.display = 'block';
+
+                    if (freehandPath.length < 3) return;
+
+                    // Create closed polygon from drawn path
+                    currentPolygon = new google.maps.Polygon({
+                        paths: freehandPath,
+                        fillColor: '#4f46e5',
+                        fillOpacity: 0.15,
+                        strokeWeight: 2,
+                        strokeColor: '#4f46e5',
+                        map: map
+                    });
 
                     performSearchInPolygon(currentPolygon);
                 }
+                document.addEventListener('mouseup', onMouseUp);
             });
         };
 
