@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sök Platser - Frihandskarta</title>
+    <title>Roadtrip!</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
@@ -126,7 +126,7 @@
         let accessToken = null;
         let driveFileId = null;
         
-        // Klistra in ditt Client ID här när du skapat det i Google Cloud (Steg 3 i guiden)
+        // Klistra in ditt Client ID här när du skapat det i Google Cloud
         const CLIENT_ID = '940508107225-2h91m1o4he6r27g1q7hgtaq0f6127dd8.apps.googleusercontent.com'; 
 
         window.onload = function () {
@@ -366,7 +366,6 @@
                     headers: {
                         'Content-Type': 'application/json',
                         'X-Goog-Api-Key': apiKey,
-                        // Lade till places.googleMapsUri i listan över fält att hämta
                         'X-Goog-FieldMask': 'places.id,places.displayName,places.location,places.rating,places.priceLevel,places.formattedAddress,places.photos,places.primaryType,places.googleMapsUri'
                     },
                     body: JSON.stringify({
@@ -463,12 +462,11 @@
                     if(pStr) priceBadge = `<span class="text-[10px] font-medium text-gray-600 bg-gray-100 px-2 py-1 rounded border border-gray-200">${pStr}</span>`;
                 }
 
-                // UI Kort - nu med länk-ikon nere till höger
+                // UI Kort - med länk-ikon nere till höger
                 const card = document.createElement('div');
                 card.id = `card-${placeId}`;
                 card.className = 'place-card bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col relative group';
                 
-                // Om vi fick tillbaka en länk från API:et, visa en knapp, annars göm knappen
                 const mapLinkHtml = place.googleMapsUri ? 
                     `<a href="${place.googleMapsUri}" target="_blank" onclick="event.stopPropagation()" class="text-indigo-600 hover:bg-indigo-50 p-1.5 rounded-full transition-colors" title="Öppna i Google Maps">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
