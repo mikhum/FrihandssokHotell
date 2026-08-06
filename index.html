@@ -88,6 +88,13 @@
                     Dra med fingret/musen på kartan...
                 </div>
             </div>
+
+            <!-- NY KNAPP: Min position -->
+            <button onclick="findMyLocation()" class="absolute bottom-4 right-4 z-10 bg-white p-2.5 md:p-3 rounded-full shadow-lg hover:bg-gray-50 text-gray-700 border border-gray-200 transition-all active:scale-95" title="Visa min position">
+                <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 22v-4m0-14V2m10 10h-4M6 12H2m18 0a8 8 0 11-16 0 8 8 0 0116 0z"></path>
+                </svg>
+            </button>
         </div>
 
         <!-- På mobil är denna list-del 40% av höjden och ligger i botten. På desktop är den en sidokolumn. -->
@@ -123,6 +130,8 @@
         let freehandPath = [];
         let freehandLine = null;
         let mdListener, mmListener;
+        
+        let userLocationMarker = null; // Håller koll på den blå "du är här"-pricken
 
         let tokenClient;
         let accessToken = null;
@@ -337,6 +346,54 @@
                 document.addEventListener('touchcancel', onInteractEnd);
             });
         };
+
+        function findMyLocation() {
+            if (navigator.geolocation) {
+                setStatus('Letar efter din GPS-position...', 'info');
+                
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const pos = {
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude,
+                        };
+
+                        // Panorera kartan till användaren och zooma in
+                        map.panTo(pos);
+                        map.setZoom(14);
+                        setStatus(null); // Rensa meddelandet
+
+                        // Om vi redan har en blå prick, flytta den. Annars skapa en ny.
+                        if (userLocationMarker) {
+                            userLocationMarker.setPosition(pos);
+                        } else {
+                            userLocationMarker = new google.maps.Marker({
+                                position: pos,
+                                map: map,
+                                icon: {
+                                    path: google.maps.SymbolPath.CIRCLE,
+                                    scale: 8,
+                                    fillColor: '#3b82f6',
+                                    fillOpacity: 1,
+                                    strokeColor: 'white',
+                                    strokeWeight: 2,
+                                },
+                                title: "Din position",
+                                zIndex: 9999 // Ser till att den ligger över eventuella hotell
+                            });
+                        }
+                    },
+                    (error) => {
+                        console.error("Geolokaliseringsfel: ", error);
+                        setStatus('Kunde inte hämta din position. Har du gett webbläsaren/telefonen tillåtelse att dela plats?', 'error');
+                    },
+                    // Sätt timeout och hög noggrannhet för GPS på mobiler
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 } 
+                );
+            } else {
+                setStatus('Din webbläsare verkar inte ha stöd för geolokalisering.', 'error');
+            }
+        }
 
         async function performSearchInPolygon(polygon) {
             clearResults();
