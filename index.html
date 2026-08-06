@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Roadtrip!</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -14,95 +14,98 @@
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .gmnoprint { transition: opacity 0.3s ease; }
         .place-card.active { border-color: #3b82f6; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.5); background-color: #eff6ff;}
+        
+        /* Förhindrar att touch-gester zoomar in webbsidan när man ritar */
+        .touch-none-map { touch-action: none; }
     </style>
 </head>
-<body class="h-screen flex flex-col">
+<!-- h-[100dvh] är avgörande för mobiler så att UI:t anpassar sig när adressfält försvinner/dyker upp -->
+<body class="h-[100dvh] flex flex-col">
 
-    <header class="bg-white shadow-md z-20 flex flex-col md:flex-row items-center justify-between px-6 py-3 border-b border-gray-200 gap-4">
-        <div class="flex items-center gap-3">
-            <div class="bg-indigo-600 p-2 rounded-lg text-white">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
+    <!-- Header är nu mer kompakt på mobiler och tillåter element att radbrytas (flex-wrap) -->
+    <header class="bg-white shadow-md z-20 flex flex-col md:flex-row items-center justify-between p-3 md:px-6 md:py-3 border-b border-gray-200 gap-3 md:gap-4 overflow-y-auto max-h-[40vh] md:max-h-none">
+        <div class="flex items-center gap-2 md:gap-3 w-full md:w-auto justify-center md:justify-start">
+            <div class="bg-indigo-600 p-1.5 md:p-2 rounded-lg text-white">
+                <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
             </div>
-            <h1 class="text-lg font-bold text-gray-800 whitespace-nowrap">Draw & Search</h1>
+            <h1 class="text-base md:text-lg font-bold text-gray-800 whitespace-nowrap">Draw & Search</h1>
         </div>
 
-        <div class="flex flex-wrap items-center gap-3 w-full justify-end">
+        <div class="flex flex-wrap items-center gap-2 md:gap-3 w-full justify-center md:justify-end">
             
-            <div class="flex gap-2 items-center bg-gray-50 p-1.5 rounded-lg border border-gray-200 flex-1 min-w-[200px] max-w-xs">
-                <input type="password" id="apiKey" placeholder="Google API-nyckel" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                <button onclick="initApp()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 py-1.5 rounded font-medium transition-colors whitespace-nowrap">Starta Karta</button>
+            <div class="flex gap-2 items-center bg-gray-50 p-1 md:p-1.5 rounded-lg border border-gray-200 flex-1 min-w-[150px] md:min-w-[200px] max-w-xs">
+                <input type="password" id="apiKey" placeholder="Google API-nyckel" class="w-full px-2 py-1 md:py-1.5 text-xs md:text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <button onclick="initApp()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] md:text-xs px-2 md:px-3 py-1.5 rounded font-medium transition-colors whitespace-nowrap">Starta</button>
             </div>
 
-            <!-- Login knapp -->
-            <button id="loginBtn" onclick="handleAuthClick()" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 flex items-center gap-2 text-xs px-3 py-1.5 rounded font-medium transition-colors whitespace-nowrap shadow-sm">
-                <svg class="w-4 h-4" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+            <button id="loginBtn" onclick="handleAuthClick()" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 flex items-center gap-1.5 text-[10px] md:text-xs px-2 md:px-3 py-1.5 rounded font-medium transition-colors whitespace-nowrap shadow-sm">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
                 Logga in
             </button>
 
-            <!-- Ny typväljare -->
-            <select id="placeType" class="text-sm border-gray-300 rounded-lg py-1.5 pl-3 pr-8 focus:ring-indigo-500 border bg-white cursor-pointer font-medium text-gray-700">
+            <select id="placeType" class="text-xs md:text-sm border-gray-300 rounded-lg py-1.5 pl-2 pr-6 md:pl-3 md:pr-8 focus:ring-indigo-500 border bg-white cursor-pointer font-medium text-gray-700 flex-1 min-w-[120px]">
                 <option value="hotel">🏨 Hotell</option>
                 <option value="tourist attraction">📸 Sevärdheter</option>
                 <option value="restaurant">🍽️ Restauranger</option>
             </select>
 
-            <!-- Fritextsökning -->
-            <div class="relative w-48">
-                <input type="text" id="freeText" placeholder="Fritext (t.ex. spa, billigt...)" class="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                <svg class="w-4 h-4 text-gray-400 absolute left-2.5 top-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            <div class="relative flex-1 min-w-[120px]">
+                <input type="text" id="freeText" placeholder="Fritext..." class="w-full pl-7 pr-2 py-1.5 text-xs md:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <svg class="w-3.5 h-3.5 text-gray-400 absolute left-2 top-2 md:top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
             </div>
 
-            <div class="flex items-center gap-4 pl-3 border-l border-gray-300">
+            <div class="flex items-center gap-2 pl-2 border-l border-gray-300">
                 <div class="flex flex-col">
-                    <label class="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Min. Betyg: <span id="ratingVal" class="text-indigo-600">4.0</span></label>
-                    <input type="range" id="minRating" min="1" max="5" step="0.5" value="4.0" class="w-20 accent-indigo-600" oninput="document.getElementById('ratingVal').innerText = this.value">
+                    <label class="text-[9px] md:text-[10px] font-bold text-gray-500 uppercase tracking-wide">Min Betyg: <span id="ratingVal" class="text-indigo-600">4.0</span></label>
+                    <input type="range" id="minRating" min="1" max="5" step="0.5" value="4.0" class="w-16 md:w-20 accent-indigo-600" oninput="document.getElementById('ratingVal').innerText = this.value">
                 </div>
             </div>
         </div>
     </header>
 
-    <main class="flex-1 flex overflow-hidden relative">
-        <div class="flex-1 relative bg-gray-200">
+    <!-- flex-col för mobil (karta uppe, lista nere), md:flex-row för desktop (sida vid sida) -->
+    <main class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+        <div class="flex-1 relative bg-gray-200 min-h-[40vh]">
             <div id="map"></div>
             
-            <div id="mapOverlay" class="absolute inset-0 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center z-10">
-                <svg class="w-20 h-20 text-indigo-200 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
-                <h2 class="text-xl font-bold text-gray-800 mb-2">Väntar på API-nyckel</h2>
-                <p class="text-gray-500 max-w-md text-center text-sm">Klistra in nyckeln och klicka på Starta Karta. <br> Kräver "Places API (New)".</p>
+            <div id="mapOverlay" class="absolute inset-0 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center z-10 p-4">
+                <svg class="w-12 h-12 md:w-20 md:h-20 text-indigo-200 mb-2 md:mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
+                <h2 class="text-lg md:text-xl font-bold text-gray-800 mb-1 md:mb-2 text-center">Väntar på API-nyckel</h2>
+                <p class="text-gray-500 max-w-md text-center text-xs md:text-sm">Klistra in nyckeln och klicka på Starta. <br> Kräver "Places API (New)".</p>
             </div>
 
-            <!-- Floating draw button -->
-            <div id="drawBtn" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 hidden">
-                <button onclick="activateDrawMode()" class="bg-white hover:bg-indigo-50 border-2 border-indigo-500 text-indigo-700 font-semibold text-sm px-5 py-2 rounded-full shadow-lg flex items-center gap-2 transition-all active:scale-95">
+            <!-- Floating draw button adjusted for touch -->
+            <div id="drawBtn" class="absolute top-3 md:top-4 left-1/2 transform -translate-x-1/2 z-10 hidden">
+                <button onclick="activateDrawMode()" class="bg-white hover:bg-indigo-50 border-2 border-indigo-500 text-indigo-700 font-semibold text-xs md:text-sm px-4 py-2 md:px-5 md:py-2 rounded-full shadow-lg flex items-center gap-2 transition-all active:scale-95">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                     Rita sökområde
                 </button>
             </div>
 
-            <!-- Active drawing mode indicator -->
-            <div id="drawingToast" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 hidden">
-                <div class="bg-indigo-600 text-white font-semibold text-sm px-5 py-2 rounded-full shadow-lg flex items-center gap-2 animate-pulse">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                    Håll och dra för att rita ett område...
+            <div id="drawingToast" class="absolute top-3 md:top-4 left-1/2 transform -translate-x-1/2 z-10 hidden w-[90%] max-w-sm">
+                <div class="bg-indigo-600 text-white font-semibold text-xs md:text-sm px-4 py-2 rounded-full shadow-lg flex items-center justify-center gap-2 animate-pulse">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                    Dra med fingret/musen på kartan...
                 </div>
             </div>
         </div>
 
-        <aside class="w-96 bg-white border-l border-gray-200 shadow-2xl flex flex-col z-20">
-            <div class="p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
-                <h3 class="font-bold text-gray-800 flex items-center gap-2">
-                    <svg class="w-5 h-5 text-indigo-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 01-1.32.95l-3.7-1.48-3.7 1.48A1 1 0 014 16V4z" clip-rule="evenodd"></path></svg>
+        <!-- På mobil är denna list-del 40% av höjden och ligger i botten. På desktop är den en sidokolumn. -->
+        <aside class="w-full md:w-96 h-[45%] md:h-full bg-white border-t md:border-t-0 md:border-l border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] md:shadow-2xl flex flex-col z-20">
+            <div class="p-3 md:p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center shrink-0">
+                <h3 class="font-bold text-gray-800 flex items-center gap-2 text-sm md:text-base">
+                    <svg class="w-4 h-4 md:w-5 md:h-5 text-indigo-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 01-1.32.95l-3.7-1.48-3.7 1.48A1 1 0 014 16V4z" clip-rule="evenodd"></path></svg>
                     Hittade Platser
                 </h3>
-                <span id="resultCount" class="bg-indigo-100 text-indigo-800 text-xs font-bold px-2 py-1 rounded-full">0 st</span>
+                <span id="resultCount" class="bg-indigo-100 text-indigo-800 text-[10px] md:text-xs font-bold px-2 py-1 rounded-full">0 st</span>
             </div>
             
-            <div id="statusMessage" class="hidden m-4 p-3 rounded text-sm font-medium text-center"></div>
+            <div id="statusMessage" class="hidden m-2 md:m-4 p-2 md:p-3 rounded text-xs md:text-sm font-medium text-center shrink-0"></div>
 
-            <div class="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-4" id="placeList">
-                <div class="h-full flex flex-col items-center justify-center text-gray-400 space-y-3">
-                    <svg class="w-12 h-12 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                    <p class="text-sm italic text-center px-4">Rita ett område på kartan för att starta sökningen.</p>
+            <div class="flex-1 overflow-y-auto p-2 md:p-4 custom-scrollbar space-y-3 md:space-y-4" id="placeList">
+                <div class="h-full flex flex-col items-center justify-center text-gray-400 space-y-2 md:space-y-3">
+                    <svg class="w-8 h-8 md:w-12 md:h-12 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    <p class="text-xs md:text-sm italic text-center px-4">Rita ett område på kartan för att starta sökningen.</p>
                 </div>
             </div>
         </aside>
@@ -121,22 +124,18 @@
         let freehandLine = null;
         let mdListener, mmListener;
 
-        // --- Google Drive & Inloggning ---
         let tokenClient;
         let accessToken = null;
         let driveFileId = null;
         
-        // Klistra in ditt Client ID här när du skapat det i Google Cloud
         const CLIENT_ID = '940508107225-2h91m1o4he6r27g1q7hgtaq0f6127dd8.apps.googleusercontent.com'; 
 
         window.onload = function () {
-            // Ladda den gamla lokala nyckeln om vi inte loggar in
             const savedKey = localStorage.getItem('googleMapsApiKey');
             if (savedKey) {
                 document.getElementById('apiKey').value = savedKey;
             }
 
-            // Initiera Googles inloggningsklient
             tokenClient = google.accounts.oauth2.initTokenClient({
                 client_id: CLIENT_ID,
                 scope: 'https://www.googleapis.com/auth/drive.appdata',
@@ -158,7 +157,6 @@
         async function loadKeyFromDrive() {
             try {
                 setStatus('Letar efter sparad nyckel på din Drive...', 'info');
-                // Sök efter filen i den dolda appData-mappen
                 const res = await fetch('https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name="hotellAppKey.txt"', {
                     headers: { Authorization: `Bearer ${accessToken}` }
                 });
@@ -166,7 +164,6 @@
                 
                 if (data.files && data.files.length > 0) {
                     driveFileId = data.files[0].id;
-                    // Ladda ner innehållet (API-nyckeln)
                     const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`, {
                         headers: { Authorization: `Bearer ${accessToken}` }
                     });
@@ -174,9 +171,9 @@
                     
                     document.getElementById('apiKey').value = key.trim();
                     setStatus('Nyckel hämtad från Google Drive!', 'info');
-                    initApp(); // Starta kartan automatiskt
+                    initApp();
                 } else {
-                    setStatus('Ingen nyckel sparad på Drive ännu. Skriv in den och tryck Starta Karta för att spara den för alltid.', 'info');
+                    setStatus('Ingen nyckel sparad på Drive ännu. Skriv in den och tryck Starta.', 'info');
                 }
             } catch (err) {
                 console.error(err);
@@ -185,10 +182,9 @@
         }
 
         async function saveKeyToDrive(keyStr) {
-            if (!accessToken) return; // Gör inget om vi inte är inloggade
+            if (!accessToken) return;
             
             try {
-                // Skapa en multipart/form-data för att skicka både inställningar och textinnehåll
                 const metadata = { name: 'hotellAppKey.txt', parents: ['appDataFolder'] };
                 const file = new Blob([keyStr], {type: 'text/plain'});
                 const form = new FormData();
@@ -196,11 +192,11 @@
                 form.append('file', file);
 
                 let url = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
-                let method = 'POST'; // Skapa ny fil
+                let method = 'POST';
 
                 if (driveFileId) {
                     url = `https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=multipart`;
-                    method = 'PATCH'; // Uppdatera befintlig fil
+                    method = 'PATCH';
                 }
 
                 const res = await fetch(url, {
@@ -209,12 +205,11 @@
                     body: form
                 });
                 const data = await res.json();
-                if(data.id) driveFileId = data.id; // Spara id för framtida uppdateringar under sessionen
+                if(data.id) driveFileId = data.id; 
             } catch (err) {
                 console.error("Fel vid sparande till Drive:", err);
             }
         }
-        // --- Slut på Drive-kod ---
 
         function setStatus(msg, type = 'info') {
             const statusDiv = document.getElementById('statusMessage');
@@ -222,7 +217,7 @@
                 statusDiv.classList.add('hidden');
                 return;
             }
-            statusDiv.className = 'm-4 p-3 rounded text-sm font-medium text-center border break-words';
+            statusDiv.className = 'm-2 md:m-4 p-2 md:p-3 rounded text-xs md:text-sm font-medium text-center border break-words shrink-0';
             if (type === 'error') statusDiv.classList.add('bg-red-50', 'text-red-700', 'border-red-200');
             else if (type === 'info') statusDiv.classList.add('bg-blue-50', 'text-blue-700', 'border-blue-200');
             else if (type === 'warning') statusDiv.classList.add('bg-yellow-50', 'text-yellow-700', 'border-yellow-200');
@@ -235,33 +230,31 @@
             const apiKey = document.getElementById('apiKey').value.trim();
             if (!apiKey) return;
 
-            // Spara nyckeln i webbläsarens minne (som backup)
             localStorage.setItem('googleMapsApiKey', apiKey);
-            
-            // Spara nyckeln till Drive (händer bara om man är inloggad)
             saveKeyToDrive(apiKey);
 
-            document.getElementById('mapOverlay').innerHTML = '<p class="text-indigo-600 font-bold animate-pulse">Laddar modern karta...</p>';
+            document.getElementById('mapOverlay').innerHTML = '<p class="text-indigo-600 font-bold animate-pulse text-sm">Laddar modern karta...</p>';
 
             const script = document.createElement('script');
             script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&v=3.64&libraries=geometry&callback=initializeMap&loading=async`;
             script.async = true;
             script.defer = true;
             script.onerror = () => {
-                document.getElementById('mapOverlay').innerHTML = '<p class="text-red-500 font-bold">Kunde inte ladda Google Maps.</p>';
+                document.getElementById('mapOverlay').innerHTML = '<p class="text-red-500 font-bold text-sm">Kunde inte ladda Google Maps.</p>';
             };
             document.head.appendChild(script);
         }
 
         window.initializeMap = function() {
             document.getElementById('mapOverlay').style.display = 'none';
-            document.getElementById('drawBtn').style.display = 'block';
+            document.getElementById('drawBtn').style.display = 'flex';
 
             map = new google.maps.Map(document.getElementById('map'), {
-                center: { lat: 59.3293, lng: 18.0686 }, // Stockholm
+                center: { lat: 59.3293, lng: 18.0686 }, 
                 zoom: 12,
                 mapTypeControl: false,
                 streetViewControl: false,
+                fullscreenControl: false, // Tar bort fullscreenknappen som stökar till det på mobil
                 styles: [
                     { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] }
                 ]
@@ -275,13 +268,16 @@
             isDrawMode = true;
 
             document.getElementById('drawBtn').style.display = 'none';
-            document.getElementById('drawingToast').style.display = 'block';
+            document.getElementById('drawingToast').style.display = 'flex';
+            
+            // Stänger av touch-panning så att fingret ritar istället
             map.setOptions({ draggable: false, gestureHandling: 'none', draggableCursor: 'crosshair' });
 
             freehandPath = [];
             if (freehandLine) { freehandLine.setMap(null); freehandLine = null; }
             if (currentPolygon) { currentPolygon.setMap(null); currentPolygon = null; }
 
+            // Google Maps omvandlar touch-drag till mousedown/mousemove när gestureHandling är 'none'
             mdListener = map.addListener('mousedown', function(e) {
                 isMouseDown = true;
                 freehandPath = [e.latLng];
@@ -302,17 +298,24 @@
                     }
                 });
 
-                function onMouseUp() {
-                    document.removeEventListener('mouseup', onMouseUp);
+                // Avsluta ritningen (Stödjer både mus och touch)
+                function onInteractEnd() {
+                    document.removeEventListener('mouseup', onInteractEnd);
+                    document.removeEventListener('touchend', onInteractEnd); // Touch support
+                    document.removeEventListener('touchcancel', onInteractEnd);
+                    
                     isMouseDown = false;
                     isDrawMode = false;
+                    
                     google.maps.event.removeListener(mdListener);
                     google.maps.event.removeListener(mmListener);
+                    
+                    // Slå på touch-scroll i kartan igen
                     map.setOptions({ draggable: true, gestureHandling: 'auto', draggableCursor: '' });
                     if (freehandLine) { freehandLine.setMap(null); freehandLine = null; }
 
                     document.getElementById('drawingToast').style.display = 'none';
-                    document.getElementById('drawBtn').style.display = 'block';
+                    document.getElementById('drawBtn').style.display = 'flex';
 
                     if (freehandPath.length < 3) return;
 
@@ -327,7 +330,11 @@
 
                     performSearchInPolygon(currentPolygon);
                 }
-                document.addEventListener('mouseup', onMouseUp);
+                
+                // Lyssna på dokumentet för att fånga när man lyfter fingret/musen
+                document.addEventListener('mouseup', onInteractEnd);
+                document.addEventListener('touchend', onInteractEnd);
+                document.addEventListener('touchcancel', onInteractEnd);
             });
         };
 
@@ -338,7 +345,6 @@
             const apiKey = document.getElementById('apiKey').value.trim();
             if (!apiKey) return;
 
-            // Bounding Box
             const polygonPath = polygon.getPath();
             let north = -90, south = 90, east = -180, west = 180;
             
@@ -352,12 +358,10 @@
             
             setStatus('Söker via Places API (New)...', 'info');
 
-            // Hämta värden från gränssnittet
             const minRating = parseFloat(document.getElementById('minRating').value);
             const placeType = document.getElementById('placeType').value;
             const freeText = document.getElementById('freeText').value.trim();
             
-            // Kombinera fritext och platstyp. 
             const queryStr = freeText ? `${freeText} ${placeType}` : placeType;
 
             try {
@@ -396,14 +400,12 @@
         }
 
         function filterAndDisplayResults(allResults, polygon, minRating, apiKey) {
-            // Geometri-filtrering (Endast platser INNUTI formen)
             let filtered = allResults.filter(place => {
                 if(!place.location) return false;
                 const latLng = new google.maps.LatLng(place.location.latitude, place.location.longitude);
                 return google.maps.geometry.poly.containsLocation(latLng, polygon);
             });
 
-            // Betygsfiltrering
             filtered = filtered.filter(place => {
                 const rating = place.rating || 0;
                 return rating >= minRating;
@@ -424,14 +426,13 @@
                 const placeId = place.id;
                 const location = { lat: place.location.latitude, lng: place.location.longitude };
                 
-                // Nål
                 const marker = new google.maps.Marker({
                     map: map,
                     position: location,
                     title: place.displayName.text,
                     icon: {
                         path: google.maps.SymbolPath.CIRCLE,
-                        scale: 12,
+                        scale: 10, // Lite mindre ikoner på mobil
                         fillColor: "#ef4444",
                         fillOpacity: 1,
                         strokeColor: "white",
@@ -442,7 +443,6 @@
 
                 placeMarkers.push({ id: placeId, marker: marker, data: place });
 
-                // Hämta första bilden
                 let photoUrl = 'https://placehold.co/300x200/f8fafc/94a3b8?text=Ingen+Bild';
                 if (place.photos && place.photos.length > 0) {
                     const photoName = place.photos[0].name;
@@ -459,32 +459,39 @@
                     if (place.priceLevel === 'PRICE_LEVEL_MODERATE') pStr = '💰💰 Mellan';
                     if (place.priceLevel === 'PRICE_LEVEL_EXPENSIVE') pStr = '💰💰💰 Dyrt';
                     if (place.priceLevel === 'PRICE_LEVEL_VERY_EXPENSIVE') pStr = '💰💰💰💰 Lyx';
-                    if(pStr) priceBadge = `<span class="text-[10px] font-medium text-gray-600 bg-gray-100 px-2 py-1 rounded border border-gray-200">${pStr}</span>`;
+                    if(pStr) priceBadge = `<span class="text-[9px] md:text-[10px] font-medium text-gray-600 bg-gray-100 px-1.5 md:px-2 py-0.5 md:py-1 rounded border border-gray-200">${pStr}</span>`;
                 }
 
-                // UI Kort - med länk-ikon nere till höger
                 const card = document.createElement('div');
                 card.id = `card-${placeId}`;
-                card.className = 'place-card bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col relative group';
+                card.className = 'place-card bg-white border border-gray-200 rounded-lg md:rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer flex md:flex-col relative group';
                 
                 const mapLinkHtml = place.googleMapsUri ? 
-                    `<a href="${place.googleMapsUri}" target="_blank" onclick="event.stopPropagation()" class="text-indigo-600 hover:bg-indigo-50 p-1.5 rounded-full transition-colors" title="Öppna i Google Maps">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                    `<a href="${place.googleMapsUri}" target="_blank" onclick="event.stopPropagation()" class="text-indigo-600 hover:bg-indigo-50 p-1 md:p-1.5 rounded-full transition-colors ml-auto" title="Öppna i Google Maps">
+                        <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
                     </a>` : '';
 
+                // Layouten på kortet anpassas. På mobil visas bild och text sida-vid-sida för att spara plats
                 card.innerHTML = `
-                    <div class="absolute top-2 left-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold z-10 shadow-md border-2 border-white">${index + 1}</div>
-                    <div class="h-32 bg-gray-200 overflow-hidden relative">
+                    <div class="absolute top-1 left-1 md:top-2 md:left-2 bg-red-500 text-white w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center text-[10px] md:text-xs font-bold z-10 shadow-md border border-white">${index + 1}</div>
+                    <div class="w-24 h-auto md:w-full md:h-32 bg-gray-200 overflow-hidden relative shrink-0">
                         <img src="${photoUrl}" alt="${place.displayName.text}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy">
-                        <div class="absolute top-2 right-2 bg-white/95 px-2 py-1 rounded-md text-xs font-bold text-gray-800 flex items-center gap-1 shadow-sm">
+                        <div class="hidden md:flex absolute top-2 right-2 bg-white/95 px-2 py-1 rounded-md text-xs font-bold text-gray-800 items-center gap-1 shadow-sm">
                             <span class="text-amber-400 text-sm">★</span> ${place.rating || 'N/A'}
                         </div>
                     </div>
-                    <div class="p-3">
-                        <h4 class="font-bold text-gray-800 text-sm leading-tight mb-1">${place.displayName.text}</h4>
-                        <p class="text-[11px] text-gray-400 font-medium mb-1 uppercase tracking-wider">${typeStr}</p>
-                        <p class="text-xs text-gray-500 truncate" title="${place.formattedAddress}">${place.formattedAddress}</p>
-                        <div class="mt-3 flex justify-between items-center">
+                    <div class="p-2 md:p-3 flex-1 flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-start gap-1">
+                                <h4 class="font-bold text-gray-800 text-xs md:text-sm leading-tight mb-0.5 md:mb-1 line-clamp-2">${place.displayName.text}</h4>
+                                <div class="md:hidden flex shrink-0 bg-gray-50 px-1 rounded text-[10px] font-bold text-gray-700 items-center gap-0.5 border border-gray-100">
+                                    <span class="text-amber-400">★</span> ${place.rating || '-'}
+                                </div>
+                            </div>
+                            <p class="text-[9px] md:text-[11px] text-gray-400 font-medium mb-1 uppercase tracking-wider line-clamp-1">${typeStr}</p>
+                            <p class="text-[10px] md:text-xs text-gray-500 truncate" title="${place.formattedAddress}">${place.formattedAddress}</p>
+                        </div>
+                        <div class="mt-2 md:mt-3 flex justify-between items-center">
                             ${priceBadge}
                             ${mapLinkHtml}
                         </div>
@@ -493,21 +500,19 @@
 
                 listContainer.appendChild(card);
 
-                // Klick i listan => Hoppa till kartan
                 card.onclick = () => {
                     highlightPlace(placeId);
                     map.panTo(location);
                     if(map.getZoom() < 14) map.setZoom(14);
                 };
 
-                // Klick på kartan => Hoppa till listan
                 marker.addListener('click', () => {
                     highlightPlace(placeId);
                     const listElement = document.getElementById('placeList');
                     const cardElement = document.getElementById(`card-${placeId}`);
                     if(cardElement) {
                         listElement.scrollTo({
-                            top: cardElement.offsetTop - listElement.offsetTop - 16,
+                            top: cardElement.offsetTop - listElement.offsetTop - 8,
                             behavior: 'smooth'
                         });
                     }
@@ -517,7 +522,7 @@
 
         function highlightPlace(id) {
             placeMarkers.forEach(hm => {
-                hm.marker.setIcon({ ...hm.marker.getIcon(), fillColor: "#ef4444", scale: 12 });
+                hm.marker.setIcon({ ...hm.marker.getIcon(), fillColor: "#ef4444", scale: 10 });
                 hm.marker.setZIndex(1);
                 const el = document.getElementById(`card-${hm.id}`);
                 if(el) el.classList.remove('active');
@@ -527,10 +532,10 @@
             const activeData = placeMarkers.find(hm => hm.id === id);
             
             if (activeData) {
-                activeData.marker.setIcon({ ...activeData.marker.getIcon(), fillColor: "#3b82f6", scale: 16 });
+                activeData.marker.setIcon({ ...activeData.marker.getIcon(), fillColor: "#3b82f6", scale: 14 });
                 activeData.marker.setZIndex(999);
                 
-                infoWindow.setContent(`<div class="p-1 font-sans text-sm font-bold">${activeData.data.displayName.text}</div>`);
+                infoWindow.setContent(`<div class="p-1 font-sans text-xs md:text-sm font-bold">${activeData.data.displayName.text}</div>`);
                 infoWindow.open(map, activeData.marker);
 
                 const activeCard = document.getElementById(`card-${id}`);
@@ -546,8 +551,6 @@
             document.getElementById('resultCount').innerText = `0 st`;
             document.getElementById('placeList').innerHTML = '';
         }
-
-        // --- Nya Event Listeners för automatisk sökning ---
         
         function triggerSearchIfPolygonExists() {
             if (currentPolygon) {
