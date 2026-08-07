@@ -21,29 +21,25 @@
 </head>
 <!-- h-[100dvh] är avgörande för mobiler så att UI:t anpassar sig när adressfält försvinner/dyker upp -->
 <body class="h-[100dvh] flex flex-col">
-    
 
-    <!-- Header är nu mer kompakt på mobiler och tillåter element att radbrytas (flex-wrap) -->
-    <header class="bg-white shadow-md z-20 flex flex-col md:flex-row items-center justify-between p-3 md:px-6 md:py-3 border-b border-gray-200 gap-3 md:gap-4 overflow-y-auto max-h-[40vh] md:max-h-none">
-        <div class="flex items-center gap-2 md:gap-3 w-full md:w-auto justify-center md:justify-start">
-            <div class="bg-indigo-600 p-1.5 md:p-2 rounded-lg text-white">
-                <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
+    <!-- Header är nu mycket renare, bara filtrering och en inställningsknapp -->
+    <header class="bg-white shadow-md z-20 flex flex-col md:flex-row items-center justify-between p-3 md:px-6 md:py-3 border-b border-gray-200 gap-3 md:gap-4 overflow-visible shrink-0">
+        <div class="flex items-center justify-between w-full md:w-auto">
+            <div class="flex items-center gap-2 md:gap-3">
+                <div class="bg-indigo-600 p-1.5 md:p-2 rounded-lg text-white">
+                    <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
+                </div>
+                <h1 class="text-base md:text-lg font-bold text-gray-800 whitespace-nowrap">Roadtrip!</h1>
             </div>
-            <h1 class="text-base md:text-lg font-bold text-gray-800 whitespace-nowrap">Draw & Search</h1>
+            
+            <!-- Inställningsknapp (Kugghjul) för mobil och desktop -->
+            <button onclick="document.getElementById('setupModal').classList.remove('hidden')" class="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors" title="Inställningar & API">
+                <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            </button>
         </div>
 
         <div class="flex flex-wrap items-center gap-2 md:gap-3 w-full justify-center md:justify-end">
-            
-            <div class="flex gap-2 items-center bg-gray-50 p-1 md:p-1.5 rounded-lg border border-gray-200 flex-1 min-w-[150px] md:min-w-[200px] max-w-xs">
-                <input type="password" id="apiKey" placeholder="Google API-nyckel" class="w-full px-2 py-1 md:py-1.5 text-xs md:text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                <button onclick="initApp()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] md:text-xs px-2 md:px-3 py-1.5 rounded font-medium transition-colors whitespace-nowrap">Starta</button>
-            </div>
-
-            <button id="loginBtn" onclick="handleAuthClick()" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 flex items-center gap-1.5 text-[10px] md:text-xs px-2 md:px-3 py-1.5 rounded font-medium transition-colors whitespace-nowrap shadow-sm">
-                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-                Logga in
-            </button>
-
+            <!-- Filter sektionen intakt -->
             <select id="placeType" class="text-xs md:text-sm border-gray-300 rounded-lg py-1.5 pl-2 pr-6 md:pl-3 md:pr-8 focus:ring-indigo-500 border bg-white cursor-pointer font-medium text-gray-700 flex-1 min-w-[120px]">
                 <option value="hotel">🏨 Hotell</option>
                 <option value="tourist attraction">📸 Sevärdheter</option>
@@ -69,10 +65,49 @@
         <div class="flex-1 relative bg-gray-200 min-h-[40vh]">
             <div id="map"></div>
             
-            <div id="mapOverlay" class="absolute inset-0 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center z-10 p-4">
-                <svg class="w-12 h-12 md:w-20 md:h-20 text-indigo-200 mb-2 md:mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
-                <h2 class="text-lg md:text-xl font-bold text-gray-800 mb-1 md:mb-2 text-center">Väntar på API-nyckel</h2>
-                <p class="text-gray-500 max-w-md text-center text-xs md:text-sm">Klistra in nyckeln och klicka på Starta. <br> Kräver "Places API (New)".</p>
+            <!-- NY INSTÄLLNINGS-MODAL (Täcker hela kartområdet tills nyckeln är redo) -->
+            <div id="setupModal" class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm flex flex-col items-center justify-center z-50 p-4 transition-opacity duration-300">
+                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm md:max-w-md overflow-hidden transform transition-transform">
+                    <div class="bg-indigo-600 p-4 text-center relative">
+                        <h2 class="text-lg md:text-xl font-bold text-white">Välkommen till Roadtrip!</h2>
+                        <p class="text-indigo-100 text-xs md:text-sm mt-1">Ställ in din API-nyckel för att börja söka</p>
+                    </div>
+                    
+                    <div class="p-5 space-y-5">
+                        <!-- Alternativ 1: Drive -->
+                        <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                            <h3 class="text-xs md:text-sm font-bold text-gray-800 mb-1">Alternativ 1: Google Drive (Rekommenderas)</h3>
+                            <p class="text-[10px] md:text-xs text-gray-500 mb-3 leading-relaxed">Spara nyckeln en gång så laddas den in automatiskt nästa gång du besöker sidan.</p>
+                            
+                            <button id="loginBtn" onclick="handleAuthClick()" class="w-full bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 flex items-center justify-center gap-2 text-xs md:text-sm px-4 py-2.5 rounded-lg font-medium transition-colors shadow-sm">
+                                <svg class="w-4 h-4" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                                Logga in och synka nyckel
+                            </button>
+                            <div id="driveStatus" class="mt-2 text-[10px] md:text-xs text-center font-bold text-indigo-600 hidden"></div>
+                        </div>
+
+                        <div class="relative flex items-center py-1">
+                            <div class="flex-grow border-t border-gray-200"></div>
+                            <span class="flex-shrink-0 mx-4 text-gray-400 text-[10px] uppercase font-bold tracking-wider">Eller</span>
+                            <div class="flex-grow border-t border-gray-200"></div>
+                        </div>
+
+                        <!-- Alternativ 2: Manuell inmatning -->
+                        <div>
+                            <label class="block text-xs md:text-sm font-bold text-gray-800 mb-1">Alternativ 2: Klistra in tillfälligt</label>
+                            <p class="text-[10px] md:text-xs text-gray-500 mb-2">Nyckeln lagras bara i den här webbläsaren.</p>
+                            <input type="password" id="apiKey" placeholder="AIzaSyB..." class="w-full px-3 py-2 text-xs md:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none mb-3 font-mono">
+                            <button onclick="initApp()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs md:text-sm px-4 py-2.5 rounded-lg font-bold transition-colors shadow-sm">
+                                Spara och Starta Kartan
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Knapp för att stänga modalen (Visas bara om kartan redan är igång och modalen öppnades via kugghjulet) -->
+                    <div id="closeSetupBtn" class="bg-gray-100 border-t border-gray-200 p-2 hidden">
+                        <button onclick="document.getElementById('setupModal').classList.add('hidden')" class="w-full text-gray-600 hover:text-gray-900 text-xs md:text-sm font-bold py-1.5 transition-colors">Tillbaka till kartan</button>
+                    </div>
+                </div>
             </div>
 
             <!-- Floating draw button adjusted for touch -->
@@ -144,6 +179,10 @@
             const savedKey = localStorage.getItem('googleMapsApiKey');
             if (savedKey) {
                 document.getElementById('apiKey').value = savedKey;
+                // Om vi redan har nyckeln sparad, starta direkt i bakgrunden.
+                if(savedKey.length > 10) {
+                    initApp();
+                }
             }
 
             tokenClient = google.accounts.oauth2.initTokenClient({
@@ -152,7 +191,7 @@
                 callback: (tokenResponse) => {
                     if (tokenResponse && tokenResponse.access_token) {
                         accessToken = tokenResponse.access_token;
-                        document.getElementById('loginBtn').innerHTML = '✅ Inloggad';
+                        document.getElementById('loginBtn').innerHTML = '✅ Inloggad på Google';
                         document.getElementById('loginBtn').classList.add('bg-green-50', 'text-green-700', 'border-green-200');
                         loadKeyFromDrive();
                     }
@@ -165,8 +204,12 @@
         }
 
         async function loadKeyFromDrive() {
+            const statusEl = document.getElementById('driveStatus');
+            statusEl.classList.remove('hidden', 'text-red-600', 'text-yellow-600');
+            statusEl.classList.add('text-indigo-600');
+            
             try {
-                setStatus('Letar efter sparad nyckel på din Drive...', 'info');
+                statusEl.innerText = 'Letar efter sparad nyckel på din Drive...';
                 const res = await fetch('https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name="hotellAppKey.txt"', {
                     headers: { Authorization: `Bearer ${accessToken}` }
                 });
@@ -180,14 +223,19 @@
                     const key = await fileRes.text();
                     
                     document.getElementById('apiKey').value = key.trim();
-                    setStatus('Nyckel hämtad från Google Drive!', 'info');
-                    initApp();
+                    statusEl.innerText = 'Nyckel hämtad! Startar kartan...';
+                    statusEl.classList.add('text-green-600');
+                    
+                    // Vänta en halv sekund så användaren hinner läsa meddelandet, starta sedan.
+                    setTimeout(initApp, 700); 
                 } else {
-                    setStatus('Ingen nyckel sparad på Drive ännu. Skriv in den och tryck Starta.', 'info');
+                    statusEl.innerText = 'Ingen nyckel sparad på Drive ännu. Skriv in den nedan och tryck Starta, så sparar vi den.';
+                    statusEl.classList.add('text-yellow-600');
                 }
             } catch (err) {
                 console.error(err);
-                setStatus('Kunde inte läsa från Drive.', 'error');
+                statusEl.innerText = 'Kunde inte läsa från Drive.';
+                statusEl.classList.add('text-red-600');
             }
         }
 
@@ -237,27 +285,49 @@
         }
 
         function initApp() {
-            const apiKey = document.getElementById('apiKey').value.trim();
-            if (!apiKey) return;
+            const apiKeyInput = document.getElementById('apiKey');
+            const apiKey = apiKeyInput.value.trim();
+            
+            if (!apiKey) {
+                // Röd ram runt inmatningsfältet om det är tomt
+                apiKeyInput.classList.add('border-red-500', 'ring-2', 'ring-red-200');
+                setTimeout(() => apiKeyInput.classList.remove('border-red-500', 'ring-2', 'ring-red-200'), 1500);
+                return;
+            }
 
+            // Spara nyckeln
             localStorage.setItem('googleMapsApiKey', apiKey);
             saveKeyToDrive(apiKey);
 
-            document.getElementById('mapOverlay').innerHTML = '<p class="text-indigo-600 font-bold animate-pulse text-sm">Laddar modern karta...</p>';
+            // Göm setup-modalen snyggt
+            document.getElementById('setupModal').classList.add('opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                document.getElementById('setupModal').classList.add('hidden');
+                document.getElementById('setupModal').classList.remove('opacity-0', 'pointer-events-none');
+            }, 300); // matchar css-transition
+            
+            // Aktivera "Stäng"-knappen i modalen ifall de öppnar kugghjulet igen senare
+            document.getElementById('closeSetupBtn').classList.remove('hidden');
+
+            // Om kartan redan är laddad (t.ex. om de bara var inne och bytte nyckel) avbryter vi här.
+            if (map) return;
 
             const script = document.createElement('script');
             script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&v=3.64&libraries=geometry&callback=initializeMap&loading=async`;
             script.async = true;
             script.defer = true;
             script.onerror = () => {
-                document.getElementById('mapOverlay').innerHTML = '<p class="text-red-500 font-bold text-sm">Kunde inte ladda Google Maps.</p>';
+                // Om nyckeln var felaktig, visa modalen igen med ett fel
+                document.getElementById('setupModal').classList.remove('hidden');
+                document.getElementById('driveStatus').classList.remove('hidden');
+                document.getElementById('driveStatus').innerText = 'Kunde inte ladda kartan. Är nyckeln korrekt?';
+                document.getElementById('driveStatus').classList.add('text-red-600');
             };
             document.head.appendChild(script);
         }
 
         window.initializeMap = function() {
-            document.getElementById('mapOverlay').style.display = 'none';
-            document.getElementById('drawBtn').style.display = 'flex';
+            document.getElementById('drawBtn').classList.remove('hidden');
 
             map = new google.maps.Map(document.getElementById('map'), {
                 center: { lat: 59.3293, lng: 18.0686 }, 
