@@ -317,39 +317,39 @@
 
             document.getElementById('mapOverlay').classList.remove('hidden');
             document.getElementById('overlayText').innerText = 'Laddar karta...';
-
-            if (window.google && window.google.maps) {
-                window.initializeMap();
-                return;
-            }
-
-            const script = document.createElement('script');
-            script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&v=3.64&libraries=geometry&callback=initializeMap&loading=async`;
-            script.async = true;
-            script.defer = true;
-            script.onerror = () => {
-                document.getElementById('overlayText').className = 'text-red-500 font-bold';
-                document.getElementById('overlayText').innerText = 'Kunde inte ladda kartan.';
-            };
-            document.head.appendChild(script);
-        }
-
-        window.initializeMap = function() {
-            document.getElementById('mapOverlay').classList.add('hidden');
-            document.getElementById('drawBtn').style.display = 'block';
-
-            map = new google.maps.Map(document.getElementById('map'), {
-                center: { lat: 59.3293, lng: 18.0686 },
-                zoom: 12,
-                mapTypeControl: false,
-                streetViewControl: false,
-                gestureHandling: 'greedy',
+                gestureHandling: 'greedy', // Bättre för touch/mobil
                 styles: [
                     { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] }
                 ]
             });
 
             infoWindow = new google.maps.InfoWindow();
+
+            // --- Sätt upp sökfältet för städer (Autocomplete) ---
+            const citySearchInput = document.getElementById('citySearch');
+            const autocomplete = new google.maps.places.Autocomplete(citySearchInput, {
+                fields: ["geometry", "name"]
+            });
+            
+            // Koppla sökresultaten till kartan så att den prioriterar platser i närheten av där man redan tittar
+            autocomplete.bindTo('bounds', map);
+
+            // Vad som händer när man klickar på ett förslag i rullgardinsmenyn
+            autocomplete.addListener('place_changed', () => {
+                const place = autocomplete.getPlace();
+                if (!place.geometry || !place.geometry.location) {
+                    setStatus('Kunde inte hitta platsen på kartan.', 'warning');
+                    return;
+                }
+                
+                // Centrera och zooma in på den valda platsen
+                if (place.geometry.viewport) {
+                    map.fitBounds(place.geometry.viewport); // Om det är ett stort område (t.ex. ett land)
+                } else {
+                    map.setCenter(place.geometry.location); // Om det är en exakt punkt
+                    map.setZoom(13);
+                }
+            });
         };
 
         function geolocateUser() {
